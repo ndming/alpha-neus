@@ -1,0 +1,9 @@
+icecream
+numpy<2.0.0
+opencv-python
+pyhocon
+PyMCubes
+scipy
+tensorboard
+tqdm
+trimesh
