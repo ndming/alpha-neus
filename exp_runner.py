@@ -15,6 +15,7 @@ from pyhocon import ConfigFactory
 from models.dataset import Dataset
 from models.fields import RenderingNetwork, SDFNetwork, SingleVarianceNetwork, NeRF
 from models.renderer import NeuSRenderer
+from models.wrapper import NGPSDFWrapper
 
 
 class Runner:
@@ -218,7 +219,7 @@ class Runner:
         copyfile(self.conf_path, os.path.join(self.base_exp_dir, 'recording', 'config.conf'))
 
     def load_checkpoint(self, checkpoint_name):
-        checkpoint = torch.load(os.path.join(self.base_exp_dir, 'checkpoints', checkpoint_name), map_location=self.device)
+        checkpoint = torch.load(os.path.join(self.base_exp_dir, 'checkpoints', checkpoint_name), map_location=self.device, weights_only=False)
         self.nerf_outside.load_state_dict(checkpoint['nerf'])
         self.sdf_network.load_state_dict(checkpoint['sdf_network_fine'])
         self.deviation_network.load_state_dict(checkpoint['variance_network_fine'])
@@ -352,16 +353,30 @@ class Runner:
 
         logging.info('End')
 
-    def validate_dcudf(self, world_space=False, resolution=64, threshold=0.0, is_cut=False, scale=1.0):
+    def validate_dcudf(self, world_space=False, resolution=64, threshold=0.0, is_cut=False, scale=1.0, snapshot=None):
         from dcudf.mesh_extraction import dcudf
+
         bound_min = torch.tensor(self.dataset.object_bbox_min, dtype=torch.float32)/scale
         bound_max = torch.tensor(self.dataset.object_bbox_max, dtype=torch.float32)/scale
 
+        if snapshot is not None:
+            print("[INFO] Using NGP snapshot for SDF")
+            sdf_model = NGPSDFWrapper(snapshot, device="cuda")
+            sdf_fn = lambda pts: sdf_model.sdf(pts)
+        else:
+            print("[INFO] Using NeuS SDF network")
+            sdf_fn = lambda pts: self.sdf_network.sdf(pts)
+
+        # quick sanity check
+        pts = torch.randn(10000, 3).cuda()
+        sdf_vals = sdf_fn(pts)
+        print("SDF min/max:", sdf_vals.min().item(), sdf_vals.max().item())
+
         extractor = dcudf(
-            lambda pts: self.sdf_network.sdf(pts),
+            sdf_fn,
             resolution,
             threshold,
-            query_func_optim=lambda pts: torch.abs(self.sdf_network.sdf(pts)),
+            query_func_optim=lambda pts: torch.abs(sdf_fn(pts)),
             bound_min=bound_min,
             bound_max=bound_max,
             laplacian_weight=500.0,
@@ -421,6 +436,7 @@ if __name__ == '__main__':
     parser.add_argument('--ckpt', type=int, default=None)
     parser.add_argument('--scale', type=float, default=1.0)
     parser.add_argument('--idx', type=int, default=-1)
+    parser.add_argument('--ngp_snapshot', type=str, default=None)
 
     args = parser.parse_args()
 
@@ -434,7 +450,7 @@ if __name__ == '__main__':
     elif args.mode == 'validate_mesh':
         runner.validate_mesh(world_space=True, resolution=512, threshold=args.mcube_threshold, scale=args.scale)
     elif args.mode == 'validate_dcudf':
-        runner.validate_dcudf(world_space=True, resolution=512, threshold=args.mcube_threshold, is_cut=False, scale=args.scale)
+        runner.validate_dcudf(world_space=True, resolution=512, threshold=args.mcube_threshold, is_cut=False, scale=args.scale, snapshot=args.ngp_snapshot)
     elif args.mode.startswith('interpolate'):  # Interpolate views given two image indices
         _, img_idx_0, img_idx_1 = args.mode.split('_')
         img_idx_0 = int(img_idx_0)

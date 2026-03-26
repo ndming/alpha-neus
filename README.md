@@ -53,6 +53,10 @@ python exp_runner.py --is_continue --mode validate_mesh --conf ${config_name} --
 ```sh
 python exp_runner.py --is_continue --mode validate_dcudf --conf ${config_name} --case ${data_dirname} --mcube_threshold 0.005
 ```
+4. mesh from NeuS2 snapshot
+```bash
+python exp_runner.py --is_continue --mode validate_dcudf --conf ./confs/womask_base.conf --case synthetic/bottle --gpu 0 --mcube_threshold 0.005 --ngp_snapshot /home/minhnd59/repos/neus2/data/alpha_synthetic/bottle/transform_train_base.msgpack
+```
 
 
 

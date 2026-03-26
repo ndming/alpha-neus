@@ -1,8 +1,10 @@
 icecream
+matplotlib
 numpy<2.0.0
 opencv-python
 pyhocon
 PyMCubes
+scikit-image
 scipy
 tensorboard
 tqdm
