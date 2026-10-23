@@ -1,10 +1,9 @@
 import pyngp as ngp
 import torch
-import numpy as np
 
 
 class NGPSDFWrapper:
-    def __init__(self, snapshot_path, device="cuda"):
+    def __init__(self, snapshot_path, resolution, device="cuda"):
         self.device = device
         self.testbed = ngp.Testbed(ngp.TestbedMode.Nerf)
 
@@ -12,7 +11,8 @@ class NGPSDFWrapper:
         self.testbed.load_snapshot(snapshot_path)
         self.testbed.shall_train = False
 
-        self.res = 256
+        self.res = resolution
+        print(f"[NGP] Querying SDF values on grid of resolution {self.res}")
         self.sdf_values = self.testbed.query_sdf_on_grid([self.res, self.res, self.res])
         assert self.sdf_values.shape[0] == self.res * self.res * self.res
 

@@ -361,7 +361,7 @@ class Runner:
 
         if snapshot is not None:
             print("[INFO] Using NGP snapshot for SDF")
-            sdf_model = NGPSDFWrapper(snapshot, device="cuda")
+            sdf_model = NGPSDFWrapper(snapshot, resolution, device="cuda")
             sdf_fn = lambda pts: sdf_model.sdf(pts)
         else:
             print("[INFO] Using NeuS SDF network")
@@ -436,6 +436,7 @@ if __name__ == '__main__':
     parser.add_argument('--ckpt', type=int, default=None)
     parser.add_argument('--scale', type=float, default=1.0)
     parser.add_argument('--idx', type=int, default=-1)
+    parser.add_argument('--res', type=int, default=512)
     parser.add_argument('--ngp_snapshot', type=str, default=None)
 
     args = parser.parse_args()
@@ -448,9 +449,9 @@ if __name__ == '__main__':
     elif args.mode == 'validate_image':
         runner.validate_image(idx=args.idx, resolution_level=1)
     elif args.mode == 'validate_mesh':
-        runner.validate_mesh(world_space=True, resolution=512, threshold=args.mcube_threshold, scale=args.scale)
+        runner.validate_mesh(world_space=True, resolution=args.res, threshold=args.mcube_threshold, scale=args.scale)
     elif args.mode == 'validate_dcudf':
-        runner.validate_dcudf(world_space=True, resolution=512, threshold=args.mcube_threshold, is_cut=False, scale=args.scale, snapshot=args.ngp_snapshot)
+        runner.validate_dcudf(world_space=True, resolution=args.res, threshold=args.mcube_threshold, is_cut=False, scale=args.scale, snapshot=args.ngp_snapshot)
     elif args.mode.startswith('interpolate'):  # Interpolate views given two image indices
         _, img_idx_0, img_idx_1 = args.mode.split('_')
         img_idx_0 = int(img_idx_0)
